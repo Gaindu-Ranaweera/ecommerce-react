@@ -1,7 +1,7 @@
 import { getAuth} from "@clerk/nextjs/server"
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import authAdmin from "@/middleware/authAdmin";
+import authAdmin from "@/middlewares/authAdmin";
 
 // Toggle store isActive
 export async function POST(request){
