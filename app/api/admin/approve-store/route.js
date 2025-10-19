@@ -1,7 +1,7 @@
 import { getAuth} from "@clerk/nextjs/server"
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import authAdmin from "@/middlewares/authAdmin";
+import authAdmin from "@/middleware/authAdmin";
 
 
 // Approve Seller
