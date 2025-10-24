@@ -32,7 +32,7 @@ await prisma.store.update({
   data: { isActive: !store.isActive }
 })
 
-return NextPesponse.json({message: "store updated successfully"})
+return NextResponse.json({message: "store updated successfully"})
 
 
   }catch (error){
