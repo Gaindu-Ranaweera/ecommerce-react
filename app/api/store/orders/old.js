@@ -1,0 +1,54 @@
+import prisma from "@/lib/prisma";
+import { getAuth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import authSeller from "@/middlewares/authSeller";
+
+
+
+// Update seller order status
+export async function PUT(request) {
+  try {
+    const { orderId, status } = await request.json();
+
+    // Run the update
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { status },
+    }); // 👈 close the update properly here
+
+    // Then return response separately
+    return NextResponse.json({ message: "Order Status Updated" });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Failed to update order" },
+      { status: 500 }
+    );
+  }
+}
+
+
+// Get all orders for a seller
+
+export async function POST(request){
+  try {
+    const { userId } = getAuth()
+    const storeId = await authSeller(userId)
+
+    if(!storeId){
+      return NextResponse.json({ error: 'not authorized'}, { status: 401})
+    }
+
+    const orders = await prisma.order.findMany({
+      where: {storeId},
+      include: {user: true, address: true, orderItems:{include: {product: true}}},
+      orderBy: {createdAt: 'desc'}
+    })
+    return NextResponse.json({orders})
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: error.code || error.message }, { status:
+      400
+    })
+  }
+}

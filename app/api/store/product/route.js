@@ -1,52 +1,56 @@
-import { getAuth } from "@clerk/nextjs/server"
+import { getAuth } from "@clerk/nextjs/server";
 import imagekit from "@/configs/imagekit";
 import prisma from "@/lib/prisma";
 import authSeller from "@/middlewares/authSeller";
-import { NextResponse } from "next/server"
+import { NextResponse } from "next/server";
 
 // Add a new product
-export async function POST(request){
-  try{
-    const {userId} = getAuth(request)
-    const storeId = await authSeller(userId)
+export async function POST(request) {
+  try {
+    const { userId } = getAuth(request);
+    const storeId = await authSeller(userId);
 
-    if(!storeId){
-      return NextResponse.json({error: 'not authorized'}, { status: 400})
+    if (!storeId) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 400 });
     }
 
     // Get the data from the form
+    const formData = await request.formData();
+    const name = formData.get("name");
+    const description = formData.get("description");
+    const mrp = Number(formData.get("mrp"));
+    const price = Number(formData.get("price"));
+    const category = formData.get("category");
+    const images = formData.getAll("images");
 
-    const formData = await request.formData()
-    const name = formData.get("name")
-    const description = formData.get("description")
-    const mrp = Number(formData.get("mrp"))
-    const price = Number(formData.get("price"))
-    const category = formData.get("category")
-    const images = formData.getAll("images")
-
-    if(!name || !description || !mrp || !price || !category || images.length <1){
-      return NextResponse.json({error: 'missing product details'}, { status: 400})
+    if (!name || !description || !mrp || !price || !category || images.length < 1) {
+      return NextResponse.json({ error: "Missing product details" }, { status: 400 });
     }
 
-    // Uploading Images to Imagekit
-    const imagesUrl = await Promise.all(images.map(async (image) => {
-      const buffer = Buffer.from(await image.arrayBuffer());
-      const response = await imagekit.upload({
-        file: buffer,
-        fileName: image.name,
-        folder: "products",
+    // Uploading images to ImageKit
+    const imagesUrl = await Promise.all(
+      images.map(async (image) => {
+        const buffer = Buffer.from(await image.arrayBuffer());
+        const response = await imagekit.upload({
+          file: buffer,
+          fileName: image.name,
+          folder: "products",
+        });
+
+        // Use response.filePath (capital P)
+        return imagekit.url({
+          path: response.filePath,
+          transformation: [
+            { quality: "auto" },
+            { format: "webp" },
+            { width: "1024" },
+          ],
+        });
       })
-      const url = imagekit.url({
-        path: response.filepath,
-        transformation: [
-          { quality: 'auto'},
-          { format: 'webp' },
-          { width: '1024'}
-        ]
-      })
-      return url
-    }))
-     await prisma.product.create({
+    );
+
+    // Save product to DB
+    await prisma.product.create({
       data: {
         name,
         description,
@@ -54,34 +58,40 @@ export async function POST(request){
         price,
         category,
         images: imagesUrl,
-        storeId
-      }
-     })
-      return NextResponse.json({message: "Product added Successfully"})
+        storeId,
+      },
+    });
 
-  }catch (error){
-    console.error(error);
-    return NextResponse.json({ error: error.code || error.message }, { status: 400})
-
+    return NextResponse.json({ message: "Product added successfully" });
+  } catch (error) {
+    console.error("Error adding product:", error);
+    return NextResponse.json(
+      { error: error?.message || "Failed to add product" },
+      { status: 400 }
+    );
   }
 }
 
-// Get All products for a seller
+// Get all products for a seller
+export async function GET(request) {
+  try {
+    const { userId } = getAuth(request);
+    const storeId = await authSeller(userId);
 
-export async function GET(request){
-  try{
-    const {userId} = getAuth(request)
-    const storeId = await authSeller(userId)
-
-    if(!storeId){
-      return NextResponse.json({error: 'not authorized'}, { status: 400})
+    if (!storeId) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 400 });
     }
-    const products = await prisma.product.findMany({where: { storeId}})
-    return NextResponse.json({products})
 
-  }catch (error){
+    const products = await prisma.product.findMany({
+      where: { storeId },
+    });
+
+    return NextResponse.json({ products });
+  } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: error.code || error.message }, { status: 400})
-
+    return NextResponse.json(
+      { error: error?.message || "Failed to fetch products" },
+      { status: 400 }
+    );
   }
 }
