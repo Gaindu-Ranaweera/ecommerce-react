@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useUser } from "@clerk/nextjs";
 import { fetchCart, uploadCart } from "@/lib/features/cart/cartSlice";
 import { useAuth } from "@clerk/clerk-react";
+import { fetchAddress } from "@/lib/features/address/addressSlice";
 
 export default function PublicLayout({ children }) {
 
@@ -24,6 +25,7 @@ export default function PublicLayout({ children }) {
     useEffect(()=>{
         if(user){
             dispatch(fetchCart({getToken}))
+            dispatch(fetchAddress({getToken}))
         }
     },[user])
 
