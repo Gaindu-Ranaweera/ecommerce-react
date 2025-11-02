@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { PaymentMethod } from "@prisma/client";
 
 
 
@@ -49,7 +50,7 @@ export async function POST(request){
 
     if (couponCode && coupon.forMember){
       
-      if(!hasPlusPlan){
+      if(!isPlusMember){
         return NextResponse.json({ error: "Coupon valid for members only"}, {status: 400})
       }
     }
@@ -123,13 +124,13 @@ orderIds.push(order.id)
 
 // Get all orders for a user
 
-export async function Get(request){
+export async function GET(request){
   try {
     const {userId } = getAuth(request)
     const orders = await prisma.order.findMany({
       where: {userId, OR: [
-        {paymentMethod: paymentMethod.COD},
-        {AND: [{paymentMethod: paymentMethod.STRIPE}, {isPaid: true}]}
+        {paymentMethod: PaymentMethod.COD},
+        {AND: [{paymentMethod: PaymentMethod.STRIPE}, {isPaid: true}]}
       ]},
       include: {
         orderItems: {include: {product: true}},
