@@ -7,67 +7,85 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
-
 export default function Orders() {
-
-
-    const {getToken} = useAuth()
-    const {user, isLoaded} = useUser()
+    const { getToken } = useAuth()
+    const { user, isLoaded } = useUser()
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true)
 
     const router = useRouter()
 
     useEffect(() => {
-        const fetchOrders = async () =>{
+        const fetchOrders = async () => {
             try {
                 const token = await getToken()
-                const {data} = await axios.get('/api/orders', { headers: {
-                    Authorization: `Bearer ${token}`
-                }})
-                setOrders(data.orders)
+                const { data } = await axios.get('/api/orders', {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                })
+
+                // Add readable status for Stripe payments
+                const formattedOrders = data.orders.map(order => {
+                    if (order.paymentMethod === "STRIPE") {
+                        return {
+                            ...order,
+                            displayStatus: order.isPaid ? "Paid" : "Pending Payment"
+                        }
+                    } else {
+                        return {
+                            ...order,
+                            displayStatus: order.status // COD order uses order status
+                        }
+                    }
+                })
+
+                setOrders(formattedOrders)
                 setLoading(false)
             } catch (error) {
                 toast.error(error?.response?.data?.error || error.message)
             }
         }
-        if(isLoaded){
-            if(user){
+
+        if (isLoaded) {
+            if (user) {
                 fetchOrders()
-            }else{
+            } else {
                 router.push('/')
             }
         }
     }, [isLoaded, user, getToken, router]);
 
-    if(!isLoaded || loading){
-        return <loading />
+    if (!isLoaded || loading) {
+        return <div className="min-h-[70vh] flex items-center justify-center">Loading...</div>
     }
 
     return (
         <div className="min-h-[70vh] mx-6">
             {orders.length > 0 ? (
-                (
-                    <div className="my-20 max-w-7xl mx-auto">
-                        <PageTitle heading="My Orders" text={`Showing total ${orders.length} orders`} linkText={'Go to home'} />
+                <div className="my-20 max-w-7xl mx-auto">
+                    <PageTitle
+                        heading="My Orders"
+                        text={`Showing total ${orders.length} orders`}
+                        linkText={'Go to home'}
+                    />
 
-                        <table className="w-full max-w-5xl text-slate-500 table-auto border-separate border-spacing-y-12 border-spacing-x-4">
-                            <thead>
-                                <tr className="max-sm:text-sm text-slate-600 max-md:hidden">
-                                    <th className="text-left">Product</th>
-                                    <th className="text-center">Total Price</th>
-                                    <th className="text-left">Address</th>
-                                    <th className="text-left">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {orders.map((order) => (
-                                    <OrderItem order={order} key={order.id} />
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )
+                    <table className="w-full max-w-5xl text-slate-500 table-auto border-separate border-spacing-y-12 border-spacing-x-4">
+                        <thead>
+                            <tr className="max-sm:text-sm text-slate-600 max-md:hidden">
+                                <th className="text-left">Product</th>
+                                <th className="text-center">Total Price</th>
+                                <th className="text-left">Address</th>
+                                <th className="text-left">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {orders.map((order) => (
+                                <OrderItem key={order.id} order={order} />
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             ) : (
                 <div className="min-h-[80vh] mx-6 flex items-center justify-center text-slate-400">
                     <h1 className="text-2xl sm:text-4xl font-semibold">You have no orders</h1>
